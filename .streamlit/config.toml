@@ -1,0 +1,7 @@
+[theme]
+base = "dark"               # ここが最重要。ベースをダークモードにする
+primaryColor = "#8B5CF6"    # アクセントカラー（鮮やかなバイオレット）
+backgroundColor = "#0E1117" # メイン背景（漆黒に近いグレー）
+secondaryBackgroundColor = "#262730" # サイドバーの背景
+textColor = "#FAFAFA"       # 文字色（ほぼ白）
+font = "sans serif"
