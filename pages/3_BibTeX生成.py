@@ -52,7 +52,7 @@ def main():
     # 出力設定
     st.sidebar.markdown("---")
     st.sidebar.header("出力設定")
-    bib_file_path = st.sidebar.text_input("保存先ファイルパス(.bib)を入力してください。(新しいファイルを作成する場合、保存ファイル名)", value="references.bib", help="絶対パスまたは相対パスを入力してください。ファイルがない場合は新規作成されます。")
+    bib_file_path = st.sidebar.text_input("保存先ファイルパス(.bib)を入力してください。", value="references.bib", help="絶対パスを入力")
 
     st.header(f"{ENTRY_TYPES[entry_type]} の情報を入力")
 
@@ -123,4 +123,5 @@ def main():
                     st.error(f"ファイルの保存中にエラーが発生しました: {e}")
 
 if __name__ == "__main__":
+
     main()
