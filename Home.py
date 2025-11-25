@@ -21,7 +21,7 @@ with col1:
     """, unsafe_allow_html=True)
 
 # --- ツール選択エリア（カードデザイン） ---
-st.markdown("### 🛠 Tools")
+st.markdown("### Tools(サイドバーから選択)")
 
 # 3カラムレイアウトでツールを並べる
 col_tool1, col_tool2, col_tool3 = st.columns(3)
@@ -31,21 +31,18 @@ with col_tool1:
         st.success("データ可視化")
         st.markdown("**散布図 & 近似直線**")
         st.caption("実験データをアップロードして、美しいグラフと近似直線を描画・保存します。")
-        st.markdown("*サイドバーから選択*")
 
 with col_tool2:
     with st.container():
         st.warning("表作成")
         st.markdown("**LaTeX Table Maker**")
         st.caption("Excelライクな操作でLaTeXの表コードを出力。Booktabs記法に完全対応。")
-        st.markdown("*サイドバーから選択*")
 
 with col_tool3:
     with st.container():
         st.info("文献管理")
         st.markdown("**BibTeX Generator**")
         st.caption("論文情報を入力してBibTeXコードを即座に生成。フォーマットミスを防ぎます。")
-        st.markdown("*サイドバーから選択*")
 
 st.divider()
 
@@ -57,3 +54,4 @@ with st.expander("Tips: 使いこなしのヒント", expanded=True):
     - **BibTeX**: Google Scholarの引用ボタンからコピーするより、ここで整形した方が統一感が出ます。
 
     """)
+
