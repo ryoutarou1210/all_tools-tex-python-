@@ -16,9 +16,13 @@ if parent_dir not in sys.path:
 
 try:
     import style
-    import auth_manager
+    # ファイル名が auth_maneger.py (typo) の場合と auth_manager.py の両方に対応
+    try:
+        import auth_manager
+    except ImportError:
+        import auth_maneger as auth_manager
 except ImportError:
-    # パス追加後も失敗する場合のフォールバック（またはエラー表示）
+    # パス追加後も失敗する場合のフォールバック
     st.error("必要なモジュール (style.py, auth_manager.py) が見つかりません。")
     st.stop()
 
@@ -187,7 +191,7 @@ def generate_custom_latex(df, merges, caption, label, col_fmt, use_booktabs, cen
             if (i, j) in merge_map:
                 rs, cs = merge_map[(i, j)]
                 
-                # LaTeXの作成: \multicolumn{cs}{c}{\multirow{rs}{*}{Content}}
+                # LaTeXの作成
                 if cs == 1 and rs > 1:
                     cell_latex = f"\\multirow{{{rs}}}{{*}}{{{content}}}"
                 elif rs == 1 and cs > 1:
@@ -378,7 +382,7 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
     try:
         active_format = column_format
         if len(active_format) != len(edited_df.columns):
-             st.warning(f"注意: 列数({len(edited_df.columns)})とフォーマット指定({len(active_format)})の長さが一致していません。")
+            st.warning(f"注意: 列数({len(edited_df.columns)})とフォーマット指定({len(active_format)})の長さが一致していません。")
         
         final_code = generate_custom_latex(
             st.session_state.df,
