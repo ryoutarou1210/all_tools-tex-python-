@@ -23,7 +23,7 @@ def generate_bibtex_entry(entry_type, key, fields):
 def main():
     st.set_page_config(page_title="BibTeX Generator (Web版)")
     style.apply_custom_style()
-    st.title("BibTeX Generator (Web版)")
+    st.title("BibTeX作成")
 
 
     # --- サイドバー設定 ---
@@ -40,7 +40,7 @@ def main():
     auth_manager.check_auth()
 
     # --- ファイルアップロード機能 ---
-    st.markdown("### 1. 既存の.bibファイルをアップロード（追記したい場合）")
+    st.markdown("### 1. 既存の.bibファイルをアップロード")
     uploaded_file = st.file_uploader("手元の .bib ファイルをここにドラッグ＆ドロップ", type=['bib'])
     
     existing_content = ""
@@ -50,7 +50,7 @@ def main():
         existing_content = stringio
         st.success(f"`{uploaded_file.name}` を読み込みました。ここに新しい文献を追記します。")
     else:
-        st.warning("ファイルがアップロードされていない場合は、新規作成となります。")
+        st.warning("ファイルがアップロードされていない場合は、新規作成")
 
     st.markdown("---")
     st.markdown("### 2. 文献情報の入力")
@@ -131,4 +131,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
