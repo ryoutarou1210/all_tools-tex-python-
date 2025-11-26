@@ -54,9 +54,12 @@ def resize_dataframe(df, target_rows, target_cols):
             base = new_col
             n = 1
             while new_col in df.columns:
-                new_col = f"{base}_{n} + 1"
+                new_col = f"{base}_{n}"
                 n += 1
             df[new_col] = ""
+
+    # ★変更点: インデックスを 1 始まりに振り直す
+    df.index = range(1, len(df) + 1)
 
     return df
 
@@ -124,13 +127,13 @@ def highlight_merges(df):
     if "merge_list" in st.session_state:
         for m in st.session_state.merge_list:
             r, c, rs, cs = m["r"], m["c"], m["rs"], m["cs"]
-            # 結合範囲に色（薄いオレンジ）を適用
+            # ilocを使うため、インデックスのラベルに関わらず 0始まりの位置指定で正しく動作します
             style_df.iloc[r:r+rs, c:c+cs] = 'background-color: #ffeeba; color: black;'
             
     return style_df
 
 # ---------------------------------------------------------
-# LaTeX 生成 (色なしバージョンに戻しました)
+# LaTeX 生成
 # ---------------------------------------------------------
 
 def generate_custom_latex(df, merges, caption, label, col_fmt, use_booktabs, center):
@@ -229,6 +232,8 @@ if "df" not in st.session_state:
         np.full((5, 4), ""),
         columns=[f"列 {i+1}" for i in range(4)]
     )
+    # ★変更点: 初期化時も1始まりにする
+    st.session_state.df.index = range(1, len(st.session_state.df) + 1)
 
 if "merge_list" not in st.session_state:
     st.session_state.merge_list = []
@@ -314,12 +319,11 @@ with st.expander("セルの結合設定", expanded=True):
         st.write(""); st.write("")
         st.button("追加", key="merge_add", on_click=add_merge)
     
-    # --- 結合確認用プレビュー (色付き) ---
     st.write("▼ **結合状態プレビュー**（黄色いエリアが結合されます）")
     st.dataframe(
         st.session_state.df.style.apply(lambda _: highlight_merges(st.session_state.df), axis=None),
         use_container_width=True,
-        height=200 # 高さを制限
+        height=200
     )
 
     st.write("現在の結合リスト")
@@ -363,7 +367,7 @@ st.divider()
 # ---------------------------------------------------------
 
 st.write("### 3. データの編集")
-st.caption("※ここで値を入力してください。結合は反映されませんが、出力時には適用されます。")
+st.caption("※行番号が 1 から始まります。")
 
 edited_df = st.data_editor(
     st.session_state.df,
@@ -400,4 +404,3 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
-
