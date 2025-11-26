@@ -11,9 +11,6 @@ import auth_manager
 
 st.set_page_config(page_title="LaTeX表作成ツール", layout="wide")
 
-# 1. 認証チェック（先頭）
-auth_manager.check_auth()
-
 style.apply_custom_style()
 
 # 初期化 & データ同期
@@ -122,6 +119,7 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
         st.error(f"Error: {e}")
 
 auth_manager.show_profile()
+
 
 
 
