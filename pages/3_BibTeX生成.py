@@ -25,8 +25,7 @@ def main():
     style.apply_custom_style()
     st.title("BibTeX Generator (Web版)")
 
-    # 1. 認証チェック
-    auth_manager.check_auth()
+
     # --- サイドバー設定 ---
     st.sidebar.header("設定")
     ENTRY_TYPES = {
@@ -36,6 +35,9 @@ def main():
     }
     entry_type = st.sidebar.selectbox("文献タイプ", list(ENTRY_TYPES.keys()), format_func=lambda x: ENTRY_TYPES[x])
     citation_key = st.sidebar.text_input("引用ラベル (ユニークなID)", "ref_key")
+
+        # 1. 認証チェック
+    auth_manager.check_auth()
 
     # --- ファイルアップロード機能 ---
     st.markdown("### 1. 既存の.bibファイルをアップロード（追記したい場合）")
@@ -129,3 +131,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
