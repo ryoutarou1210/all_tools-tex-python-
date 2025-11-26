@@ -26,7 +26,7 @@ with col1:
     """, unsafe_allow_html=True)
 
 # --- ツール選択エリア ---
-st.markdown("### 🛠 Tools")
+st.markdown("###Tools")
 
 col_tool1, col_tool2, col_tool3 = st.columns(3)
 
@@ -59,6 +59,7 @@ with st.expander("Pro Tips: 使いこなしのヒント", expanded=True):
     - **表ツール**: 列名はダブルクリックで変更できませんが、下部の入力欄で変更可能です。
     - **BibTeX**: Google Scholarの引用ボタンからコピーするより、ここで整形した方が統一感が出ます。
     """)
+
 
 
 
