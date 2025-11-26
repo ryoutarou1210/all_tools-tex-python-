@@ -243,7 +243,7 @@ column_format = st.sidebar.text_input("列フォーマット", key="column_forma
 # UI
 # ---------------------------------------------------------
 
-st.title("LaTeX表作成ツール（結合対応）")
+st.title("LaTeX表作成ツール")
 
 # ---------------------------------------------------------
 # 1. テーブルサイズ変更
@@ -274,28 +274,6 @@ with c2:
     with b3:
         st.button("➕", key="col_plus", on_click=update_input_vals, args=("add", "col"))
 
-st.divider()
-
-# ---------------------------------------------------------
-# 2. 列名編集（前に移動）
-# ---------------------------------------------------------
-
-st.write("### 2. 列名の編集")
-
-cols = st.columns(min(4, len(st.session_state.df.columns)))
-new_names = []
-
-for i, name in enumerate(st.session_state.df.columns):
-    ui = cols[i % len(cols)]
-    new_names.append(ui.text_input(f"列 {i+1}", value=name, key=f"rename_col_{i}"))
-
-if st.button("列名を更新", key="rename_btn"):
-    st.session_state.df.columns = new_names
-    if "main_editor" in st.session_state:
-        del st.session_state["main_editor"]
-    st.rerun()
-
-st.divider()
 
 # ---------------------------------------------------------
 # 3. セル結合設定
@@ -327,6 +305,31 @@ with st.expander("🔗 セルの結合設定"):
                 st.button("削除", key=f"merge_del_{idx}", on_click=remove_merge, args=(idx,))
     else:
         st.info("結合なし")
+
+st.divider()
+
+
+
+# ---------------------------------------------------------
+# 2. 列名編集（前に移動）
+# ---------------------------------------------------------
+
+st.write("### 2. 列名の編集")
+
+cols = st.columns(min(4, len(st.session_state.df.columns)))
+new_names = []
+
+for i, name in enumerate(st.session_state.df.columns):
+    ui = cols[i % len(cols)]
+    new_names.append(ui.text_input(f"列 {i+1}", value=name, key=f"rename_col_{i}"))
+
+if st.button("列名を更新", key="rename_btn"):
+    st.session_state.df.columns = new_names
+    if "main_editor" in st.session_state:
+        del st.session_state["main_editor"]
+    st.rerun()
+
+st.divider()
 
 st.divider()
 
@@ -371,4 +374,5 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
 
