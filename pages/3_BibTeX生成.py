@@ -19,10 +19,7 @@ def generate_bibtex(entry_type, key, fields):
 
 def main():
     st.set_page_config(page_title="BibTeX Generator")
-    
-    # 1. 認証チェック
-    auth_manager.check_auth()
-    
+        
     style.apply_custom_style()
     st.title("BibTeX Generator")
 
@@ -37,6 +34,9 @@ def main():
 
     st.sidebar.markdown("---")
     bib_file_path = st.sidebar.text_input("保存先パス", "references.bib")
+
+        # 1. 認証チェック
+    auth_manager.check_auth()
 
     st.header(f"{ENTRY_TYPES[entry_type]} 情報")
     fields = {}
@@ -92,3 +92,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
