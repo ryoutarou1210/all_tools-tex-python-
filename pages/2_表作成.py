@@ -13,7 +13,6 @@ st.set_page_config(page_title="LaTeX表作成ツール", layout="wide")
 # ---------------------------------------------------------
 # 2. 外部モジュール読み込み (パス解決ロジック)
 # ---------------------------------------------------------
-# pagesフォルダ等に配置された場合、親ディレクトリのモジュールが見えないことがあるためパスを追加
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
@@ -21,7 +20,6 @@ if parent_dir not in sys.path:
 
 try:
     import style
-    # auth_manager.py と auth_maneger.py (Typo) の両方に対応
     try:
         import auth_manager
     except ImportError:
@@ -39,23 +37,18 @@ style.apply_custom_style()
 # ---------------------------------------------------------
 
 def resize_dataframe(df, target_rows, target_cols):
-    """
-    データフレームを指定のサイズにリサイズします。
-    """
     current_rows, current_cols = df.shape
 
-    # 1. 行の調整
+    # 行の調整
     if target_rows < current_rows:
         df = df.iloc[:target_rows, :]
     elif target_rows > current_rows:
         rows_to_add = target_rows - current_rows
-        # 列構造を維持して空行を作成
         new_rows = pd.DataFrame([[""] * current_cols] * rows_to_add, columns=df.columns)
         df = pd.concat([df, new_rows], ignore_index=True)
 
-    # 2. 列の調整
-    current_rows, current_cols = df.shape 
-    
+    # 列の調整
+    current_rows, current_cols = df.shape
     if target_cols < current_cols:
         df = df.iloc[:, :target_cols]
     elif target_cols > current_cols:
@@ -68,13 +61,11 @@ def resize_dataframe(df, target_rows, target_cols):
                 new_col_name = f"{base_name}_{counter}"
                 counter += 1
             df[new_col_name] = ""
-            
+
     return df
 
+
 def clean_merges(merges, rows, cols):
-    """
-    テーブルサイズが縮小された際、範囲外になった結合設定を削除します。
-    """
     valid_merges = []
     for m in merges:
         r_end = m['r'] + m['rs']
@@ -83,10 +74,8 @@ def clean_merges(merges, rows, cols):
             valid_merges.append(m)
     return valid_merges
 
+
 def on_shape_change():
-    """
-    数値入力やボタン操作でサイズが変わったときに呼ばれます。
-    """
     if "main_editor" in st.session_state and isinstance(st.session_state["main_editor"], pd.DataFrame):
         current_df = st.session_state["main_editor"]
     else:
@@ -97,7 +86,6 @@ def on_shape_change():
 
     new_df = resize_dataframe(current_df, target_rows, target_cols)
 
-    # フォーマット文字列の調整
     current_fmt = st.session_state.get("column_format_input", "c" * len(new_df.columns))
     if len(current_fmt) < len(new_df.columns):
         last_char = current_fmt[-1] if current_fmt else 'c'
@@ -105,17 +93,16 @@ def on_shape_change():
     elif len(current_fmt) > len(new_df.columns):
         st.session_state.column_format_input = current_fmt[:len(new_df.columns)]
 
-    # 結合設定のクリーンアップ
     if "merge_list" in st.session_state:
         st.session_state.merge_list = clean_merges(st.session_state.merge_list, target_rows, target_cols)
 
     st.session_state.df = new_df
-    # リフレッシュ用にエディタのキーを削除
+
     if "main_editor" in st.session_state:
         del st.session_state["main_editor"]
 
+
 def update_input_vals(action, axis):
-    """ボタン操作による行数・列数の増減"""
     current_r = st.session_state.rows_input
     current_c = st.session_state.cols_input
 
@@ -129,103 +116,114 @@ def update_input_vals(action, axis):
             st.session_state.cols_input = current_c + 1
         elif action == 'del':
             st.session_state.cols_input = max(1, current_c - 1)
-    
+
     on_shape_change()
 
+
+# ---------------------------------------------------------
+# ★ LaTeX生成（f-stringの式内にバックスラッシュを置かない安全版）★
+# ---------------------------------------------------------
 def generate_custom_latex(df, merges, caption, label, col_fmt, use_booktabs, center):
-    """
-    結合情報を反映してLaTeXコードを生成します。
-    """
+
     rows, cols = df.shape
-    
     skip_mask = np.zeros((rows, cols), dtype=bool)
-    
-    # 結合情報のマップを作成
+
+    # 結合マップ
     merge_map = {}
     for m in merges:
         r, c, rs, cs = m['r'], m['c'], m['rs'], m['cs']
         merge_map[(r, c)] = (rs, cs)
         for i in range(r, r + rs):
             for j in range(c, c + cs):
-                if i == r and j == c:
-                    continue
-                skip_mask[i, j] = True
+                if (i, j) != (r, c):
+                    skip_mask[i, j] = True
 
     lines = []
-    
-    lines.append(f"\\begin{{table}}[htbp]")
+
+    lines.append("\\begin{table}[htbp]")
     if center:
-        lines.append(f"  \\centering")
-    
+        lines.append("  \\centering")
+
     if caption:
         lines.append(f"  \\caption{{{caption}}}")
     if label:
         lines.append(f"  \\label{{{label}}}")
-        
+
     lines.append(f"  \\begin{{tabular}}{{{col_fmt}}}")
-    lines.append(f"    {'\\toprule' if use_booktabs else '\\hline'}")
 
-    # ヘッダー行
-    header_cells = []
-    for col in df.columns:
-        header_cells.append(f"\\textbf{{{col}}}")
-    lines.append(f"    {' & '.join(header_cells)} \\\\")
-    lines.append(f"    {'\\midrule' if use_booktabs else '\\hline'}")
+    # --- 罫線設定 ---
+    top_rule = "\\toprule" if use_booktabs else "\\hline"
+    mid_rule = "\\midrule" if use_booktabs else "\\hline"
+    bottom_rule = "\\bottomrule" if use_booktabs else "\\hline"
 
-    # データ行
+    lines.append(f"    {top_rule}")
+
+    # --- ヘッダー行 ---
+    header_cells = [f"\\textbf{{{col}}}" for col in df.columns]
+    header_line = " & ".join(header_cells) + " \\\\"
+    lines.append(f"    {header_line}")
+    lines.append(f"    {mid_rule}")
+
+    # --- データ部分 ---
     for i in range(rows):
         row_cells = []
+
         for j in range(cols):
             if skip_mask[i, j]:
                 continue
-            
+
             content = str(df.iloc[i, j])
-            
-            # 結合セルの処理
+
             if (i, j) in merge_map:
                 rs, cs = merge_map[(i, j)]
-                
-                # \multicolumn{cs}{c}{\multirow{rs}{*}{Content}} の組み立て
-                if cs == 1 and rs > 1:
-                    cell_latex = f"\\multirow{{{rs}}}{{*}}{{{content}}}"
+
+                if rs > 1 and cs > 1:
+                    cell_latex = "\\multicolumn{" + str(cs) + "}{c}{\\multirow{" + str(rs) + "}{*}{" + content + "}}"
+                elif rs > 1 and cs == 1:
+                    cell_latex = "\\multirow{" + str(rs) + "}{*}{" + content + "}"
                 elif rs == 1 and cs > 1:
-                    cell_latex = f"\\multicolumn{{{cs}}}{{c}}{{{content}}}"
-                elif rs > 1 and cs > 1:
-                    cell_latex = f"\\multicolumn{{{cs}}}{{c}}{{\\multirow{{{rs}}}{{*}}{{{content}}}}}"
+                    cell_latex = "\\multicolumn{" + str(cs) + "}{c}{" + content + "}"
                 else:
                     cell_latex = content
-                
-                row_cells.append(cell_latex)
             else:
-                row_cells.append(content)
-        
-        lines.append(f"    {' & '.join(row_cells)} \\\\")
-    
-    lines.append(f"    {'\\bottomrule' if use_booktabs else '\\hline'}")
-    lines.append(f"  \\end{{tabular}}")
-    lines.append(f"\\end{{table}}")
-    
+                cell_latex = content
+
+            row_cells.append(cell_latex)
+
+        line = " & ".join(row_cells) + " \\\\"
+        lines.append(f"    {line}")
+
+    lines.append(f"    {bottom_rule}")
+    lines.append("  \\end{tabular}")
+    lines.append("\\end{table}")
+
     return "\n".join(lines)
 
+
+# ---------------------------------------------------------
+# Merge 管理
+# ---------------------------------------------------------
 def add_merge():
-    r = st.session_state.merge_r_input - 1 # 0-indexedに変換
+    r = st.session_state.merge_r_input - 1
     c = st.session_state.merge_c_input - 1
     rs = st.session_state.merge_rs_input
     cs = st.session_state.merge_cs_input
-    
+
     new_merge = {'r': r, 'c': c, 'rs': rs, 'cs': cs}
-    
+
     if "merge_list" not in st.session_state:
         st.session_state.merge_list = []
-        
+
     st.session_state.merge_list.append(new_merge)
+
 
 def remove_merge(index):
     if "merge_list" in st.session_state:
         st.session_state.merge_list.pop(index)
 
+
 # ---------------------------------------------------------
-# 初期化処理
+# 初期化
 # ---------------------------------------------------------
 
 if 'df' not in st.session_state:
@@ -242,7 +240,6 @@ if "rows_input" not in st.session_state:
 if "cols_input" not in st.session_state:
     st.session_state.cols_input = len(st.session_state.df.columns)
 
-# エディタの内容をdfに同期（他ページからの遷移時など）
 if "main_editor" in st.session_state:
     edited_data = st.session_state["main_editor"]
     if isinstance(edited_data, pd.DataFrame):
@@ -253,10 +250,9 @@ if not isinstance(st.session_state.df, pd.DataFrame):
     st.session_state.df = pd.DataFrame(st.session_state.df)
 
 # ---------------------------------------------------------
-# UI構築
+# UI
 # ---------------------------------------------------------
 
-# --- サイドバー設定 ---
 st.sidebar.title("出力設定")
 
 st.sidebar.subheader("1. スタイル")
@@ -274,11 +270,10 @@ column_format = st.sidebar.text_input("フォーマット指定", key="column_fo
 
 st.sidebar.info("結合を使用する場合は、LaTeXファイルのプリアンブルに `\\usepackage{multirow}` を追加してください。")
 
-# --- メインコンテンツ ---
-
+# --- メイン ---
 st.title("LaTeX表作成ツール (結合対応)")
 
-# --- 1. テーブルサイズ変更 ---
+# テーブルサイズ変更
 st.write("##### 1. テーブルサイズの変更")
 ctrl_col1, ctrl_col2 = st.columns(2)
 
@@ -289,12 +284,11 @@ with ctrl_col1:
     with r_c1:
         st.button("➖", key="del_row", on_click=update_input_vals, args=('del', 'row'), use_container_width=True)
     with r_c2:
-        st.number_input(
-            "Rows", min_value=1, key="rows_input", 
-            on_change=on_shape_change, label_visibility="collapsed"
-        )
+        st.number_input("Rows", min_value=1, key="rows_input",
+                        on_change=on_shape_change, label_visibility="collapsed")
     with r_c3:
-        st.button("➕", key="add_row", on_click=update_input_vals, args=('add', 'row'), type="primary", use_container_width=True)
+        st.button("➕", key="add_row", on_click=update_input_vals,
+                  args=('add', 'row'), type="primary", use_container_width=True)
 
 # 列操作
 with ctrl_col2:
@@ -303,23 +297,22 @@ with ctrl_col2:
     with c_c1:
         st.button("➖", key="del_col", on_click=update_input_vals, args=('del', 'col'), use_container_width=True)
     with c_c2:
-        st.number_input(
-            "Cols", min_value=1, key="cols_input", 
-            on_change=on_shape_change, label_visibility="collapsed"
-        )
+        st.number_input("Cols", min_value=1, key="cols_input",
+                        on_change=on_shape_change, label_visibility="collapsed")
     with c_c3:
-        st.button("➕", key="add_col", on_click=update_input_vals, args=('add', 'col'), type="primary", use_container_width=True)
+        st.button("➕", key="add_col", on_click=update_input_vals,
+                  args=('add', 'col'), type="primary", use_container_width=True)
 
 st.divider()
 
-# --- 2. 結合マネージャー ---
+# --- 結合設定 ---
 with st.expander("🔗 セルの結合設定 (Merge Cells)", expanded=False):
     st.caption("結合したい範囲を指定してください。内容は左上のセルの値が使用されます。")
     m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns([1, 1, 1, 1, 1])
-    
+
     max_r = st.session_state.rows_input
     max_c = st.session_state.cols_input
-    
+
     with m_col1:
         st.number_input("開始 行", 1, max_r, 1, key="merge_r_input")
     with m_col2:
@@ -329,7 +322,7 @@ with st.expander("🔗 セルの結合設定 (Merge Cells)", expanded=False):
     with m_col4:
         st.number_input("横幅 (ColSpan)", 1, 10, 1, key="merge_cs_input")
     with m_col5:
-        st.write("") # Spacer
+        st.write("")
         st.write("")
         st.button("結合を追加", on_click=add_merge, use_container_width=True)
 
@@ -340,20 +333,26 @@ with st.expander("🔗 セルの結合設定 (Merge Cells)", expanded=False):
             with cols_disp[0]:
                 st.text(f"行:{m['r']+1}, 列:{m['c']+1} から 縦:{m['rs']} x 横:{m['cs']}")
             with cols_disp[1]:
-                st.button("削除", key=f"del_merge_{idx}", on_click=remove_merge, args=(idx,))
+                st.button("削除", key=f"del_merge_{idx}",
+                          on_click=remove_merge, args=(idx,))
     else:
         st.info("結合設定はありません")
 
 st.divider()
 
-# --- 3. データ編集 ---
+# --- データ編集 ---
 st.write("##### 2. データの編集")
-edited_df = st.data_editor(st.session_state.df, num_rows="fixed", use_container_width=True, key="main_editor")
+edited_df = st.data_editor(
+    st.session_state.df,
+    num_rows="fixed",
+    use_container_width=True,
+    key="main_editor"
+)
 st.caption("※結合設定をしたエリアも、ここでは通常のグリッドとして表示されます。左上のセルに文字を入力してください。")
 
 st.divider()
 
-# --- 4. 列名編集 ---
+# --- 列名編集 ---
 st.subheader("列名の編集")
 cols = st.columns(min(4, len(edited_df.columns)))
 new_names = []
@@ -370,14 +369,14 @@ if st.button("列名を更新", use_container_width=True):
 
 st.divider()
 
-# --- 5. LaTeX生成 ---
+# --- LaTeX生成 ---
 if st.button("LaTeXコードを生成", type="primary", use_container_width=True):
-    st.session_state.df = edited_df 
+    st.session_state.df = edited_df
     try:
         active_format = column_format
         if len(active_format) != len(edited_df.columns):
-             st.warning(f"注意: 列数({len(edited_df.columns)})とフォーマット指定({len(active_format)})の長さが一致していません。")
-        
+            st.warning(f"注意: 列数({len(edited_df.columns)})とフォーマット指定({len(active_format)})の長さが一致していません。")
+
         final_code = generate_custom_latex(
             st.session_state.df,
             st.session_state.merge_list,
@@ -387,11 +386,11 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
             use_booktabs,
             center_table
         )
-        
+
         st.code(final_code, language="latex")
-        
+
         if st.session_state.merge_list:
-            st.info("ヒント: `\\multirow`を使用しているため、ドキュメントのヘッダーに `\\usepackage{multirow}` を記述してください。")
-            
+            st.info("ヒント: `\\multirow` を使用しているため、LaTeX のプリアンブルに `\\usepackage{multirow}` を追加してください。")
+
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
