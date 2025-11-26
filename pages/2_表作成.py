@@ -29,7 +29,6 @@ except ImportError:
     st.stop()
 
 # 3. 認証チェック & スタイル適用
-auth_manager.check_auth()
 style.apply_custom_style()
 
 # ---------------------------------------------------------
@@ -270,6 +269,8 @@ column_format = st.sidebar.text_input("フォーマット指定", key="column_fo
 
 st.sidebar.info("結合を使用する場合は、LaTeXファイルのプリアンブルに `\\usepackage{multirow}` を追加してください。")
 
+auth_manager.check_auth()
+
 # --- メイン ---
 st.title("LaTeX表作成ツール (結合対応)")
 
@@ -394,3 +395,4 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
+
