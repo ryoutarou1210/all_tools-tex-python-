@@ -48,6 +48,9 @@ label = st.sidebar.text_input("ラベル", "tab:mytable")
 st.sidebar.subheader("3. 列フォーマット")
 current_cols_count = len(st.session_state.df.columns)
 column_format = st.sidebar.text_input("フォーマット指定", value="c" * current_cols_count)
+# --- 2. プロフィール表示（最後）---
+auth_manager.show_profile()
+# ----------------------------
 
 st.title("LaTeX表作成ツール")
 
@@ -116,6 +119,5 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
     except Exception as e:
         st.error(f"Error: {e}")
 
-# --- 2. プロフィール表示（最後）---
-auth_manager.show_profile()
-# ----------------------------
+
+
