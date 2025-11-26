@@ -54,7 +54,7 @@ def resize_dataframe(df, target_rows, target_cols):
             base = new_col
             n = 1
             while new_col in df.columns:
-                new_col = f"{base}_{n}"
+                new_col = f"{base}_{n} + 1"
                 n += 1
             df[new_col] = ""
 
@@ -400,3 +400,4 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
