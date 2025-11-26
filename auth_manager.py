@@ -17,8 +17,11 @@ DEFAULT_CONFIG = {
     "measurementId": "G-BBHB6JC0DN"
 }
 
-# Firebase Auth REST API URL
+# Firebase Auth REST API URLs
+# ログイン用
 FIREBASE_AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={}"
+# 新規登録用
+FIREBASE_SIGNUP_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={}"
 
 def get_config():
     """設定を取得 (st.secretsがあればそれを優先)"""
@@ -36,7 +39,6 @@ def inject_analytics():
     if ga_id:
         # Google Analytics 4 Tag
         analytics_js = f"""
-        <!-- Google tag (gtag.js) -->
         <script async src="https://www.googletagmanager.com/gtag/js?id={ga_id}"></script>
         <script>
           window.dataLayer = window.dataLayer || [];
@@ -48,68 +50,116 @@ def inject_analytics():
         # 画面に見えない形でHTMLヘッダー的に埋め込む
         components.html(analytics_js, height=0, width=0)
 
+def _handle_auth_response(response_json):
+    """
+    ログインまたは登録成功時のセッション保存処理
+    """
+    st.session_state['is_logged_in'] = True
+    st.session_state['user_email'] = response_json['email']
+    st.session_state['localId'] = response_json['localId']
+    st.session_state['idToken'] = response_json['idToken']
+    
+    st.success("認証成功！ リダイレクトします...")
+    time.sleep(0.5)
+    st.rerun()
+
 def login_form():
     """
-    ログインフォームを表示し、認証処理を行う関数
+    ログインフォームおよび新規登録フォームを表示し、認証処理を行う関数
     認証されていない場合、以降の処理をブロック(st.stop)する
     """
     if 'is_logged_in' not in st.session_state:
         st.session_state['is_logged_in'] = False
 
     if not st.session_state['is_logged_in']:
-        # ログイン画面のレイアウト
+        # 画面レイアウト
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown("## 🔒 Login Required")
-            st.caption("このアプリケーションを利用するにはログインが必要です。")
+            st.markdown("## 🔒 Auth Required")
             
-            with st.form("login_form"):
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                submit = st.form_submit_button("Sign In", type="primary", use_container_width=True)
+            # タブで「ログイン」と「新規登録」を切り替え
+            tab_login, tab_signup = st.tabs(["ログイン", "新規登録"])
+            
+            config = get_config()
+            api_key = config.get("apiKey")
 
-            if submit:
-                config = get_config()
-                api_key = config.get("apiKey")
-                auth_url = FIREBASE_AUTH_URL.format(api_key)
-                
-                payload = {
-                    "email": email,
-                    "password": password,
-                    "returnSecureToken": True
-                }
-                
-                try:
-                    with st.spinner("Authenticating..."):
-                        r = requests.post(auth_url, json=payload)
-                        r.raise_for_status() # エラーチェック
-                        
-                        user_info = r.json()
-                        
-                        # セッションに情報を保存
-                        st.session_state['is_logged_in'] = True
-                        st.session_state['user_email'] = user_info['email']
-                        st.session_state['localId'] = user_info['localId']
-                        st.session_state['idToken'] = user_info['idToken']
-                        
-                        st.success("ログイン成功")
-                        time.sleep(0.5)
-                        st.rerun()
+            # --- 既存ユーザーログイン ---
+            with tab_login:
+                st.caption("登録済みのアカウントでログイン")
+                with st.form("login_form"):
+                    email = st.text_input("Email", key="login_email")
+                    password = st.text_input("Password", type="password", key="login_pass")
+                    submit_login = st.form_submit_button("Sign In", type="primary", use_container_width=True)
+
+                if submit_login:
+                    auth_url = FIREBASE_AUTH_URL.format(api_key)
+                    payload = {
+                        "email": email,
+                        "password": password,
+                        "returnSecureToken": True
+                    }
+                    try:
+                        with st.spinner("Authenticating..."):
+                            r = requests.post(auth_url, json=payload)
+                            r.raise_for_status()
+                            _handle_auth_response(r.json())
                     
-                except requests.exceptions.HTTPError as err:
-                    error_json = err.response.json()
-                    error_msg = error_json.get('error', {}).get('message', 'Unknown Error')
-                    
-                    if error_msg in ["EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS"]:
-                        st.error("メールアドレスまたはパスワードが間違っています。")
-                    elif error_msg == "USER_DISABLED":
-                        st.error("このアカウントは無効化されています。")
-                    elif error_msg == "TOO_MANY_ATTEMPTS_TRY_LATER":
-                        st.error("試行回数が多すぎます。しばらく待ってから再試行してください。")
+                    except requests.exceptions.HTTPError as err:
+                        error_json = err.response.json()
+                        error_msg = error_json.get('error', {}).get('message', 'Unknown Error')
+                        
+                        if error_msg in ["EMAIL_NOT_FOUND", "INVALID_PASSWORD", "INVALID_LOGIN_CREDENTIALS"]:
+                            st.error("メールアドレスまたはパスワードが間違っています。")
+                        elif error_msg == "USER_DISABLED":
+                            st.error("このアカウントは無効化されています。")
+                        elif error_msg == "TOO_MANY_ATTEMPTS_TRY_LATER":
+                            st.error("試行回数が多すぎます。しばらく待ってから再試行してください。")
+                        else:
+                            st.error(f"Login Error: {error_msg}")
+                    except Exception as e:
+                        st.error(f"System Error: {e}")
+
+            # --- 新規ユーザー登録 ---
+            with tab_signup:
+                st.caption("新しいアカウントを作成")
+                with st.form("signup_form"):
+                    new_email = st.text_input("Email", key="signup_email")
+                    new_password = st.text_input("Password (6文字以上)", type="password", key="signup_pass")
+                    new_password_confirm = st.text_input("Confirm Password", type="password", key="signup_pass_confirm")
+                    submit_signup = st.form_submit_button("Create Account", use_container_width=True)
+
+                if submit_signup:
+                    if new_password != new_password_confirm:
+                        st.error("パスワードが一致しません。")
+                    elif len(new_password) < 6:
+                        st.error("パスワードは6文字以上で設定してください。")
                     else:
-                        st.error(f"Login Error: {error_msg}")
-                except Exception as e:
-                    st.error(f"System Error: {e}")
+                        signup_url = FIREBASE_SIGNUP_URL.format(api_key)
+                        payload = {
+                            "email": new_email,
+                            "password": new_password,
+                            "returnSecureToken": True
+                        }
+                        try:
+                            with st.spinner("Creating account..."):
+                                r = requests.post(signup_url, json=payload)
+                                r.raise_for_status()
+                                _handle_auth_response(r.json())
+
+                        except requests.exceptions.HTTPError as err:
+                            error_json = err.response.json()
+                            error_msg = error_json.get('error', {}).get('message', 'Unknown Error')
+                            
+                            if error_msg == "EMAIL_EXISTS":
+                                st.error("このメールアドレスは既に登録されています。")
+                            elif error_msg == "WEAK_PASSWORD":
+                                st.error("パスワードが弱すぎます。")
+                            elif error_msg == "INVALID_EMAIL":
+                                st.error("無効なメールアドレス形式です。")
+                            else:
+                                st.error(f"Signup Error: {error_msg}")
+                        except Exception as e:
+                            st.error(f"System Error: {e}")
         
         # 未ログイン時はここでストップ
         st.stop()
