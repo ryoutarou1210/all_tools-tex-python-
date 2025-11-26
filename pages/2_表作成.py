@@ -27,7 +27,6 @@ except ImportError:
     st.error("必要なモジュール (style.py, auth_manager.py) が見つかりません。")
     st.stop()
 
-auth_manager.check_auth()
 style.apply_custom_style()
 
 # ---------------------------------------------------------
@@ -239,6 +238,8 @@ if "column_format_input" not in st.session_state:
 
 column_format = st.sidebar.text_input("列フォーマット", key="column_format_input")
 
+auth_manager.check_auth()
+
 # ---------------------------------------------------------
 # UI
 # ---------------------------------------------------------
@@ -374,6 +375,7 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
 
 
 
