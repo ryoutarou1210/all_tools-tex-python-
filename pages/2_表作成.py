@@ -49,7 +49,6 @@ st.sidebar.subheader("3. 列フォーマット")
 current_cols_count = len(st.session_state.df.columns)
 column_format = st.sidebar.text_input("フォーマット指定", value="c" * current_cols_count)
 
-st.sideber.subheader()
 # --- 2. プロフィール表示（最後）---
 auth_manager.check_auth()
 # ----------------------------
@@ -123,6 +122,7 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
         st.error(f"Error: {e}")
 
 auth_manager.show_profile()
+
 
 
 
