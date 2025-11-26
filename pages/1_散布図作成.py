@@ -9,8 +9,10 @@ import sys
 import os
 import japanize_matplotlib
 
+# 親ディレクトリへのパス追加 (auth_manager, style読み込み用)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import style
+import auth_manager
 
 # ---------------------------------------------------------
 # ユーティリティ関数
@@ -59,6 +61,11 @@ def to_latex_sci(x):
 # ---------------------------------------------------------
 def main():
     st.set_page_config(page_title="散布図作成ツール", layout="wide")
+    
+    # --- 認証 & アナリティクス ---
+    auth_manager.check_auth()
+    # -------------------------
+    
     style.apply_custom_style()
 
     # ==========================================

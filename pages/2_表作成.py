@@ -7,8 +7,14 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import style
+import auth_manager
 
 st.set_page_config(page_title="LaTeX表作成ツール", layout="wide")
+
+# --- 認証 & アナリティクス ---
+auth_manager.check_auth()
+# -------------------------
+
 style.apply_custom_style()
 
 # =========================================================

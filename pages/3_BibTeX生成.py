@@ -4,6 +4,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import style
+import auth_manager
 
 def generate_bibtex(entry_type, key, fields):
     """BibTeXエントリを生成する関数"""
@@ -23,6 +24,11 @@ def generate_bibtex(entry_type, key, fields):
 def main():
     # ページ設定は各ファイルの先頭で行います
     st.set_page_config(page_title="BibTeX Generator")
+    
+    # --- 認証 & アナリティクス ---
+    auth_manager.check_auth()
+    # -------------------------
+    
     style.apply_custom_style()
     
     st.title("BibTeX Generator")
@@ -52,7 +58,7 @@ def main():
     # 出力設定
     st.sidebar.markdown("---")
     st.sidebar.header("出力設定")
-    bib_file_path = st.sidebar.text_input("保存先ファイルパス(.bib)を入力してください。", value="references.bib", help="絶対パスを入力")
+    bib_file_path = st.sidebar.text_input("保存先ファイルパス(.bib)を入力してください。(新しいファイルを作成する場合、保存ファイル名)", value="references.bib", help="絶対パスまたは相対パスを入力してください。ファイルがない場合は新規作成されます。")
 
     st.header(f"{ENTRY_TYPES[entry_type]} の情報を入力")
 
@@ -122,6 +128,25 @@ def main():
                 except Exception as e:
                     st.error(f"ファイルの保存中にエラーが発生しました: {e}")
 
-if __name__ == "__main__":
+    # --- 本番環境（Cloud）用のダウンロード機能 ---
+    # Streamlit Cloudなどのサーバー環境では、ローカルに保存したファイルに直接アクセスできないため
+    # ダウンロードボタンを提供する必要があります。
+    if bib_file_path and os.path.exists(bib_file_path):
+        st.divider()
+        st.subheader("📁 ファイルのダウンロード")
+        st.caption("サーバー上に保存されたBibTeXファイルをダウンロードします。（これまでに追記された内容を含む）")
+        
+        with open(bib_file_path, "r", encoding="utf-8") as f:
+            file_content = f.read()
+            
+        st.download_button(
+            label="📥 references.bib をダウンロード",
+            data=file_content,
+            file_name=os.path.basename(bib_file_path),
+            mime="text/plain",
+            type="secondary",
+            use_container_width=True
+        )
 
+if __name__ == "__main__":
     main()
