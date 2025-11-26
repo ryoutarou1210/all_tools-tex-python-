@@ -267,7 +267,8 @@ if "column_format_input" not in st.session_state:
     st.session_state.column_format_input = "c" * len(st.session_state.df.columns)
 column_format = st.sidebar.text_input("フォーマット指定", key="column_format_input")
 
-st.sidebar.info("結合を使用する場合は、LaTeXファイルのプリアンブルに `\\usepackage{multirow}` を追加してください。")
+st.sidebar.info("結合を使用→`\\usepackage{multirow}` を追加。")
+st.sidebar.info("booktabsを使用→`\\usepackage{booktabs}` を追加。")
 
 auth_manager.check_auth()
 
@@ -395,5 +396,6 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
+
 
 
