@@ -86,10 +86,8 @@ def main():
         with open(bib_file_path, "r", encoding="utf-8") as f: content = f.read()
         st.download_button("📥 .bibファイルをダウンロード", content, os.path.basename(bib_file_path))
 
-    # --- 2. プロフィール表示（最後）---
-    auth_manager.show_profile()
-    # ----------------------------
 
 if __name__ == "__main__":
     main()
+
 
