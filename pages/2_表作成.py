@@ -279,7 +279,7 @@ with c2:
 # 3. セル結合設定
 # ---------------------------------------------------------
 
-with st.expander("🔗 セルの結合設定"):
+with st.expander("セルの結合設定"):
 
     r, c, rs, cs, add = st.columns([1, 1, 1, 1, 1])
 
@@ -374,5 +374,6 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
 
 
