@@ -2,7 +2,6 @@ import streamlit as st
 import sys
 import os
 
-# パス設定（環境に合わせて調整してください）
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import style
 import auth_manager
@@ -22,7 +21,6 @@ def generate_bibtex(entry_type, key, fields):
 
 def main():
     st.set_page_config(page_title="BibTeX Generator")
-        
     style.apply_custom_style()
     st.title("BibTeX Generator")
 
@@ -33,12 +31,20 @@ def main():
         "techreport": "技術報告書 (TechReport)", "website": "ウェブサイト (Website)", "misc": "その他 (Misc)"
     }
     entry_type = st.sidebar.selectbox("文献タイプ", list(ENTRY_TYPES.keys()), format_func=lambda x: ENTRY_TYPES[x])
-    citation_key = st.sidebar.text_input("引用ラベル", "ref_key")
+    
+    citation_key = st.sidebar.text_input("引用ラベル (ユニークなID)", "")
 
     st.sidebar.markdown("---")
-    bib_file_path = st.sidebar.text_input("保存先パス", "references.bib")
+    
+    # パス入力（Windowsのパスをそのまま貼り付けても大丈夫なようにします）
+    raw_path = st.sidebar.text_input("保存先パス", r"C:\Users\ryout\OneDrive\ドキュメント\専攻実験レポート\テーマF\テーマF最終レポ\references2.bib")
+    
+    # 【改良】パスの前後の引用符（"や'）を削除し、余計なスペースも消す
+    bib_file_path = raw_path.strip('"').strip("'").strip()
 
-    # 1. 認証チェック
+    # デバッグ表示：実際にどこに保存しようとしているか確認
+    st.sidebar.caption(f"📂 保存予定地:\n{bib_file_path}")
+
     auth_manager.check_auth()
 
     st.header(f"{ENTRY_TYPES[entry_type]} 情報")
@@ -69,38 +75,49 @@ def main():
         fields['url'] = st.text_input("URL")
         fields['abstract'] = st.text_area("概要")
 
-    # --- 生成・保存ボタンの処理 ---
     if st.button("生成・保存", type="primary"):
         if not citation_key or not fields.get('title'):
-            st.warning("引用キーとタイトルは必須です")
+            st.warning("⚠️ 引用キーとタイトルは必須です")
         elif not bib_file_path:
-            st.error("保存先パスを指定してください")
+            st.error("⚠️ 保存先パスを指定してください")
         else:
             bib_output = generate_bibtex(entry_type, citation_key, fields)
             
             try:
+                # 【改良】保存先のフォルダが存在しない場合、自動的に作成する
+                directory = os.path.dirname(bib_file_path)
+                if directory and not os.path.exists(directory):
+                    os.makedirs(directory)
+                    st.info(f"フォルダが存在しなかったため作成しました: {directory}")
+
                 # ファイルが存在するか確認
-                file_exists = os.path.exists(bib_file_path)
-                
-                if file_exists:
-                    # 既にファイルがある場合：重複キーチェックを行う
+                if os.path.exists(bib_file_path):
+                    # 読み込んで重複チェック
                     with open(bib_file_path, "r", encoding='utf-8') as f:
                         existing_content = f.read()
-                        # BibTeXのキー定義部分（例: @article{key,）を簡易チェック
-                        if f"{{{citation_key}," in existing_content:
-                            st.error(f"エラー: 引用キー '{citation_key}' は既にファイル内に存在します。別のキーを指定してください。")
-                            st.stop() # 処理を中断
                     
-                    mode = 'a' # 追記モード
-                    write_content = "\n" + bib_output # 前のデータとくっつかないように改行を入れる
-                    msg = "既存ファイルに追記しました"
+                    if f"{{{citation_key}," in existing_content:
+                        st.error(f"⛔ エラー: 引用キー '{citation_key}' は既にファイル内に存在します。別のキーに変更してください。")
+                        st.stop()
+                    
+                    # 追記モード
+                    mode = 'a'
+                    prefix = ""
+                    # 改行処理を丁寧に行う
+                    if existing_content and not existing_content.endswith("\n"):
+                        prefix = "\n\n"
+                    elif existing_content and not existing_content.endswith("\n\n"):
+                        prefix = "\n"
+                    
+                    write_content = prefix + bib_output
+                    msg = f"✅ {os.path.basename(bib_file_path)} に追記しました"
                 else:
-                    # ファイルがない場合：新規作成
-                    mode = 'w' # 書き込みモード
+                    # 新規作成モード
+                    mode = 'w'
                     write_content = bib_output
-                    msg = "新しいファイルを作成して保存しました"
+                    msg = f"✅ 新しく {os.path.basename(bib_file_path)} を作成して保存しました"
 
-                # ファイル書き込み実行
+                # 書き込み実行
                 with open(bib_file_path, mode, encoding='utf-8') as f:
                     f.write(write_content)
 
@@ -108,9 +125,9 @@ def main():
                 st.code(bib_output, language='latex')
 
             except Exception as e:
-                st.error(f"ファイル保存エラー: {e}")
+                st.error(f"保存エラー: {e}")
 
-    # --- ダウンロードボタン ---
+    # ダウンロードボタン
     if bib_file_path and os.path.exists(bib_file_path):
         st.divider()
         with open(bib_file_path, "r", encoding="utf-8") as f: content = f.read()
