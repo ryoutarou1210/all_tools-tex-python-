@@ -13,6 +13,7 @@ st.set_page_config(page_title="LaTeX表作成ツール", layout="wide")
 # ---------------------------------------------------------
 # 2. 外部モジュール読み込み (パス解決ロジック)
 # ---------------------------------------------------------
+# pagesフォルダ等に配置された場合、親ディレクトリのモジュールが見えないことがあるためパスを追加
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
@@ -20,7 +21,7 @@ if parent_dir not in sys.path:
 
 try:
     import style
-    # auth_manager / auth_maneger (typo) の両対応
+    # auth_manager.py と auth_maneger.py (Typo) の両方に対応
     try:
         import auth_manager
     except ImportError:
@@ -48,12 +49,12 @@ def resize_dataframe(df, target_rows, target_cols):
         df = df.iloc[:target_rows, :]
     elif target_rows > current_rows:
         rows_to_add = target_rows - current_rows
-        # 空行を追加 (列構造は維持)
+        # 列構造を維持して空行を作成
         new_rows = pd.DataFrame([[""] * current_cols] * rows_to_add, columns=df.columns)
         df = pd.concat([df, new_rows], ignore_index=True)
 
     # 2. 列の調整
-    current_rows, current_cols = df.shape
+    current_rows, current_cols = df.shape 
     
     if target_cols < current_cols:
         df = df.iloc[:, :target_cols]
@@ -207,7 +208,7 @@ def generate_custom_latex(df, merges, caption, label, col_fmt, use_booktabs, cen
     return "\n".join(lines)
 
 def add_merge():
-    r = st.session_state.merge_r_input - 1 # 0-indexed
+    r = st.session_state.merge_r_input - 1 # 0-indexedに変換
     c = st.session_state.merge_c_input - 1
     rs = st.session_state.merge_rs_input
     cs = st.session_state.merge_cs_input
@@ -241,7 +242,7 @@ if "rows_input" not in st.session_state:
 if "cols_input" not in st.session_state:
     st.session_state.cols_input = len(st.session_state.df.columns)
 
-# エディタ同期
+# エディタの内容をdfに同期（他ページからの遷移時など）
 if "main_editor" in st.session_state:
     edited_data = st.session_state["main_editor"]
     if isinstance(edited_data, pd.DataFrame):
@@ -255,7 +256,7 @@ if not isinstance(st.session_state.df, pd.DataFrame):
 # UI構築
 # ---------------------------------------------------------
 
-# --- サイドバー ---
+# --- サイドバー設定 ---
 st.sidebar.title("出力設定")
 
 st.sidebar.subheader("1. スタイル")
@@ -273,36 +274,45 @@ column_format = st.sidebar.text_input("フォーマット指定", key="column_fo
 
 st.sidebar.info("結合を使用する場合は、LaTeXファイルのプリアンブルに `\\usepackage{multirow}` を追加してください。")
 
-# --- メインエリア ---
+# --- メインコンテンツ ---
+
 st.title("LaTeX表作成ツール (結合対応)")
 
-# 1. テーブルサイズ変更
+# --- 1. テーブルサイズ変更 ---
 st.write("##### 1. テーブルサイズの変更")
 ctrl_col1, ctrl_col2 = st.columns(2)
 
+# 行操作
 with ctrl_col1:
     st.caption("行数 (Rows)")
     r_c1, r_c2, r_c3 = st.columns([1, 2, 1])
     with r_c1:
         st.button("➖", key="del_row", on_click=update_input_vals, args=('del', 'row'), use_container_width=True)
     with r_c2:
-        st.number_input("Rows", min_value=1, key="rows_input", on_change=on_shape_change, label_visibility="collapsed")
+        st.number_input(
+            "Rows", min_value=1, key="rows_input", 
+            on_change=on_shape_change, label_visibility="collapsed"
+        )
     with r_c3:
         st.button("➕", key="add_row", on_click=update_input_vals, args=('add', 'row'), type="primary", use_container_width=True)
 
+# 列操作
 with ctrl_col2:
     st.caption("列数 (Cols)")
     c_c1, c_c2, c_c3 = st.columns([1, 2, 1])
     with c_c1:
         st.button("➖", key="del_col", on_click=update_input_vals, args=('del', 'col'), use_container_width=True)
     with c_c2:
-        st.number_input("Cols", min_value=1, key="cols_input", on_change=on_shape_change, label_visibility="collapsed")
+        st.number_input(
+            "Cols", min_value=1, key="cols_input", 
+            on_change=on_shape_change, label_visibility="collapsed"
+        )
     with c_c3:
         st.button("➕", key="add_col", on_click=update_input_vals, args=('add', 'col'), type="primary", use_container_width=True)
 
 st.divider()
 
-# 2. 結合設定
+# --- 2. 結合マネージャー ---
 with st.expander("🔗 セルの結合設定 (Merge Cells)", expanded=False):
     st.caption("結合したい範囲を指定してください。内容は左上のセルの値が使用されます。")
     m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns([1, 1, 1, 1, 1])
@@ -319,7 +329,7 @@ with st.expander("🔗 セルの結合設定 (Merge Cells)", expanded=False):
     with m_col4:
         st.number_input("横幅 (ColSpan)", 1, 10, 1, key="merge_cs_input")
     with m_col5:
-        st.write("")
+        st.write("") # Spacer
         st.write("")
         st.button("結合を追加", on_click=add_merge, use_container_width=True)
 
@@ -336,14 +346,14 @@ with st.expander("🔗 セルの結合設定 (Merge Cells)", expanded=False):
 
 st.divider()
 
-# 3. データ編集
+# --- 3. データ編集 ---
 st.write("##### 2. データの編集")
 edited_df = st.data_editor(st.session_state.df, num_rows="fixed", use_container_width=True, key="main_editor")
 st.caption("※結合設定をしたエリアも、ここでは通常のグリッドとして表示されます。左上のセルに文字を入力してください。")
 
 st.divider()
 
-# 4. 列名編集
+# --- 4. 列名編集 ---
 st.subheader("列名の編集")
 cols = st.columns(min(4, len(edited_df.columns)))
 new_names = []
@@ -360,13 +370,13 @@ if st.button("列名を更新", use_container_width=True):
 
 st.divider()
 
-# 5. LaTeX生成
+# --- 5. LaTeX生成 ---
 if st.button("LaTeXコードを生成", type="primary", use_container_width=True):
     st.session_state.df = edited_df 
     try:
         active_format = column_format
         if len(active_format) != len(edited_df.columns):
-            st.warning(f"注意: 列数({len(edited_df.columns)})とフォーマット指定({len(active_format)})の長さが一致していません。")
+             st.warning(f"注意: 列数({len(edited_df.columns)})とフォーマット指定({len(active_format)})の長さが一致していません。")
         
         final_code = generate_custom_latex(
             st.session_state.df,
