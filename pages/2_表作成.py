@@ -11,7 +11,7 @@ try:
     import style
     import auth_manager
 except ImportError:
-    # ローカル動作確認用
+    # ローカル動作確認用ダミー
     class style:
         @staticmethod
         def apply_custom_style(): pass
@@ -23,93 +23,104 @@ st.set_page_config(page_title="LaTeX表作成ツール", layout="wide")
 
 style.apply_custom_style()
 
-# --- 共通ロジック: 列名の生成 ---
-def generate_new_col_name(current_columns, use_math_header):
-    base_count = len(current_columns) + 1
-    if use_math_header:
-        new_col = f"$x_{{{base_count}}}$"
-    else:
-        new_col = f"列 {base_count}"
-    
-    # 重複回避
-    base_name = new_col
-    counter = 1
-    while new_col in current_columns:
-        new_col = f"{base_name}_{counter}"
-        counter += 1
-    return new_col
+# --- リサイズ処理ロジック ---
+def resize_dataframe(df, target_rows, target_cols):
+    """
+    データフレームを指定のサイズにリサイズします。
+    - 縮小: 右・下を削除（左上のデータを保持）
+    - 拡大: 右・下に空の行/列を追加
+    """
+    current_rows, current_cols = df.shape
 
-# --- 共通ロジック: フォーマット文字列の調整 ---
-def adjust_column_format(df):
-    current_fmt = st.session_state.get("column_format_input", "c" * len(df.columns))
-    target_len = len(df.columns)
-    
-    if len(current_fmt) < target_len:
-        last_char = current_fmt[-1] if current_fmt else 'c'
-        new_fmt = current_fmt + last_char * (target_len - len(current_fmt))
-        st.session_state.column_format_input = new_fmt
-    elif len(current_fmt) > target_len:
-        st.session_state.column_format_input = current_fmt[:target_len]
-
-# --- コールバック: 数値入力変更時 ---
-def on_shape_input_change():
-    """数値入力欄が変更されたときに発火"""
-    target_rows = st.session_state.rows_input
-    target_cols = st.session_state.cols_input
-    df = st.session_state.df.copy()
-    
-    # 現在のエディタの内容を反映（サイズが変わる前のデータ確保）
-    if "main_editor" in st.session_state and isinstance(st.session_state["main_editor"], pd.DataFrame):
-        current_editor = st.session_state["main_editor"]
-        if current_editor.shape == df.shape:
-             df = current_editor
-
-    # 行のリサイズ
-    if target_rows < len(df):
-        df = df.iloc[:target_rows]
-    elif target_rows > len(df):
-        rows_to_add = target_rows - len(df)
-        new_rows = pd.DataFrame([[""] * len(df.columns)] * rows_to_add, columns=df.columns)
+    # 1. 行の調整
+    if target_rows < current_rows:
+        # 縮小: 下をカット
+        df = df.iloc[:target_rows, :]
+    elif target_rows > current_rows:
+        # 拡大: 下に追加
+        rows_to_add = target_rows - current_rows
+        # 列構造を維持して空行を作成
+        new_rows = pd.DataFrame([[""] * current_cols] * rows_to_add, columns=df.columns)
         df = pd.concat([df, new_rows], ignore_index=True)
 
-    # 列のリサイズ
-    if target_cols < len(df.columns):
-        df = df.iloc[:, :target_cols]
-    elif target_cols > len(df.columns):
-        cols_to_add = target_cols - len(df.columns)
-        use_math = st.session_state.get("use_math_header", False)
-        for _ in range(cols_to_add):
-            new_col = generate_new_col_name(df.columns, use_math)
-            df[new_col] = ""
-
-    st.session_state.df = df
-    adjust_column_format(df)
+    # 2. 列の調整
+    current_rows, current_cols = df.shape # 行変更後のサイズで再取得
     
-    # エディタリセット
+    if target_cols < current_cols:
+        # 縮小: 右をカット
+        df = df.iloc[:, :target_cols]
+    elif target_cols > current_cols:
+        # 拡大: 右に追加
+        cols_to_add = target_cols - current_cols
+        for _ in range(cols_to_add):
+            # 新しい列名を作成 (列 N)
+            new_col_name = f"列 {len(df.columns) + 1}"
+            # 重複回避
+            base_name = new_col_name
+            counter = 1
+            while new_col_name in df.columns:
+                new_col_name = f"{base_name}_{counter}"
+                counter += 1
+            df[new_col_name] = ""
+            
+    return df
+
+# --- コールバック: サイズ変更時 ---
+def on_shape_change():
+    """
+    数値入力やボタン操作でサイズが変わったときに呼ばれます。
+    エディタの最新内容を取り込んでからリサイズします。
+    """
+    # 1. 現在の編集内容を確保 (これがデータ消失防止の鍵)
+    # session_stateにeditorの内容があればそれを正とする
+    if "main_editor" in st.session_state and isinstance(st.session_state["main_editor"], pd.DataFrame):
+        current_df = st.session_state["main_editor"]
+    else:
+        current_df = st.session_state.df
+
+    # 2. 目標サイズの取得
+    target_rows = st.session_state.rows_input
+    target_cols = st.session_state.cols_input
+
+    # 3. リサイズ実行 (右下追加・削除ロジック)
+    new_df = resize_dataframe(current_df, target_rows, target_cols)
+
+    # 4. フォーマット調整 (列数に合わせて cccc... を調整)
+    current_fmt = st.session_state.get("column_format_input", "c" * len(new_df.columns))
+    if len(current_fmt) < len(new_df.columns):
+        last_char = current_fmt[-1] if current_fmt else 'c'
+        st.session_state.column_format_input = current_fmt + last_char * (len(new_df.columns) - len(current_fmt))
+    elif len(current_fmt) > len(new_df.columns):
+        st.session_state.column_format_input = current_fmt[:len(new_df.columns)]
+
+    # 5. 保存とリセット
+    st.session_state.df = new_df
+    # データエディタを強制リフレッシュさせるためにキーを削除
     if "main_editor" in st.session_state:
         del st.session_state["main_editor"]
 
+# --- コールバック: ボタン操作用 ---
+def update_input_vals(action, axis):
+    """
+    ボタンが押されたら数値入力用の変数を更新し、
+    その後にリサイズ処理(on_shape_change)を呼び出す
+    """
+    current_r = st.session_state.rows_input
+    current_c = st.session_state.cols_input
 
-# --- コールバック: ＋／ーボタン押下時 ---
-def update_df_shape(action, axis):
-    """ボタンが押されたときに発火"""
-    # 数値入力の値を基準にする（同期ズレ防止）
-    current_rows = st.session_state.rows_input
-    current_cols = st.session_state.cols_input
-    
     if axis == 'row':
         if action == 'add':
-            st.session_state.rows_input = current_rows + 1
+            st.session_state.rows_input = current_r + 1
         elif action == 'del':
-            st.session_state.rows_input = max(1, current_rows - 1)
+            st.session_state.rows_input = max(1, current_r - 1)
     elif axis == 'col':
         if action == 'add':
-            st.session_state.cols_input = current_cols + 1
+            st.session_state.cols_input = current_c + 1
         elif action == 'del':
-            st.session_state.cols_input = max(1, current_cols - 1)
-            
-    # 値を更新した後、リサイズロジックを呼ぶ
-    on_shape_input_change()
+            st.session_state.cols_input = max(1, current_c - 1)
+    
+    # 値更新後にリサイズロジックを実行
+    on_shape_change()
 
 # ----------------------------------
 
@@ -120,17 +131,17 @@ if 'df' not in st.session_state:
     columns = [f"列 {i+1}" for i in range(init_cols)]
     st.session_state.df = pd.DataFrame(data, columns=columns)
 
-# DataFrameとSession Stateの整合性チェック
-# (リロード時などに数値入力欄の初期値をDFサイズに合わせる)
+# 行数・列数の初期値を同期
 if "rows_input" not in st.session_state:
     st.session_state.rows_input = len(st.session_state.df)
 if "cols_input" not in st.session_state:
     st.session_state.cols_input = len(st.session_state.df.columns)
 
-# エディタ同期
+# エディタの内容をdfに同期 (リサイズ操作以外での更新用)
 if "main_editor" in st.session_state:
     edited_data = st.session_state["main_editor"]
     if isinstance(edited_data, pd.DataFrame):
+        # 形状が変わっていない＝ただのセル編集の時はそのまま反映
         if edited_data.shape == st.session_state.df.shape:
             st.session_state.df = edited_data
 
@@ -141,18 +152,15 @@ if not isinstance(st.session_state.df, pd.DataFrame):
 # --- サイドバー設定 ---
 st.sidebar.title("出力設定")
 
-st.sidebar.subheader("1. 編集オプション")
-st.sidebar.checkbox("列追加時に数式名にする ($x_n$)", value=False, key="use_math_header")
-
-st.sidebar.subheader("2. スタイル")
+st.sidebar.subheader("1. スタイル")
 use_booktabs = st.sidebar.checkbox("Booktabs (きれいな罫線)", value=True)
 center_table = st.sidebar.checkbox("Center (中央揃え)", value=True)
 
-st.sidebar.subheader("3. メタデータ")
+st.sidebar.subheader("2. メタデータ")
 caption = st.sidebar.text_input("キャプション", "")
 label = st.sidebar.text_input("ラベル", "tab:mytable")
 
-st.sidebar.subheader("4. 列フォーマット")
+st.sidebar.subheader("3. 列フォーマット")
 if "column_format_input" not in st.session_state:
     st.session_state.column_format_input = "c" * len(st.session_state.df.columns)
 column_format = st.sidebar.text_input("フォーマット指定", key="column_format_input")
@@ -163,7 +171,7 @@ auth_manager.check_auth()
 
 st.title("LaTeX表作成ツール")
 
-# --- 直感的な行列操作パネル (ボタン + 数値入力) ---
+# --- 直感的な行列操作パネル ---
 st.write("##### テーブルサイズの変更")
 ctrl_col1, ctrl_col2 = st.columns(2)
 
@@ -172,40 +180,39 @@ with ctrl_col1:
     st.caption("行数 (Rows)")
     r_c1, r_c2, r_c3 = st.columns([1, 2, 1])
     with r_c1:
-        st.button("➖", key="del_row", on_click=update_df_shape, args=('del', 'row'), use_container_width=True)
+        st.button("➖", key="del_row", on_click=update_input_vals, args=('del', 'row'), use_container_width=True)
     with r_c2:
-        # 数値入力 (変更時にon_change発火)
         st.number_input(
             "Rows", 
             min_value=1, 
             key="rows_input", 
-            on_change=on_shape_input_change, 
+            on_change=on_shape_change, 
             label_visibility="collapsed"
         )
     with r_c3:
-        st.button("➕", key="add_row", on_click=update_df_shape, args=('add', 'row'), type="primary", use_container_width=True)
+        st.button("➕", key="add_row", on_click=update_input_vals, args=('add', 'row'), type="primary", use_container_width=True)
 
 # 列操作
 with ctrl_col2:
     st.caption("列数 (Cols)")
     c_c1, c_c2, c_c3 = st.columns([1, 2, 1])
     with c_c1:
-        st.button("➖", key="del_col", on_click=update_df_shape, args=('del', 'col'), use_container_width=True)
+        st.button("➖", key="del_col", on_click=update_input_vals, args=('del', 'col'), use_container_width=True)
     with c_c2:
-        # 数値入力 (変更時にon_change発火)
         st.number_input(
             "Cols", 
             min_value=1, 
             key="cols_input", 
-            on_change=on_shape_input_change, 
+            on_change=on_shape_change, 
             label_visibility="collapsed"
         )
     with c_c3:
-        st.button("➕", key="add_col", on_click=update_df_shape, args=('add', 'col'), type="primary", use_container_width=True)
+        st.button("➕", key="add_col", on_click=update_input_vals, args=('add', 'col'), type="primary", use_container_width=True)
 
 st.divider()
 
 # データエディタ
+# num_rows="fixed" でUI上での行追加・削除は禁止し、ボタン操作に一本化
 edited_df = st.data_editor(st.session_state.df, num_rows="fixed", use_container_width=True, key="main_editor")
 st.divider()
 
