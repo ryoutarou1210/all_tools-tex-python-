@@ -51,7 +51,7 @@ column_format = st.sidebar.text_input("フォーマット指定", value="c" * cu
 
 st.sideber.subheader()
 # --- 2. プロフィール表示（最後）---
-auth_manager.show_profile()
+auth_manager.check_auth()
 # ----------------------------
 
 
@@ -121,6 +121,9 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
         st.code(final_code, language="latex")
     except Exception as e:
         st.error(f"Error: {e}")
+
+auth_manager.show_profile()
+
 
 
 
