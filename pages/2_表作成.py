@@ -272,7 +272,7 @@ st.sidebar.info("結合を使用する場合は、LaTeXファイルのプリア�
 auth_manager.check_auth()
 
 # --- メイン ---
-st.title("LaTeX表作成ツール (結合対応)")
+st.title("LaTeX表作成ツール")
 
 # テーブルサイズ変更
 st.write("##### 1. テーブルサイズの変更")
@@ -307,7 +307,7 @@ with ctrl_col2:
 st.divider()
 
 # --- 結合設定 ---
-with st.expander("🔗 セルの結合設定 (Merge Cells)", expanded=False):
+with st.expander("セルの結合設定 (Merge Cells)", expanded=False):
     st.caption("結合したい範囲を指定してください。内容は左上のセルの値が使用されます。")
     m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns([1, 1, 1, 1, 1])
 
@@ -395,4 +395,5 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
+
 
