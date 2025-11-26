@@ -23,7 +23,7 @@ def generate_bibtex_entry(entry_type, key, fields):
 def main():
     st.set_page_config(page_title="BibTeX Generator (Web版)")
     style.apply_custom_style()
-    st.title("BibTeX作成")
+    st.title("BibTeX作成ツール")
 
 
     # --- サイドバー設定 ---
@@ -131,5 +131,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
