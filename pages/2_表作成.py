@@ -332,8 +332,6 @@ if st.button("列名を更新", key="rename_btn"):
 
 st.divider()
 
-st.divider()
-
 # ---------------------------------------------------------
 # 4. データ編集
 # ---------------------------------------------------------
@@ -375,6 +373,7 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
 
 
 
