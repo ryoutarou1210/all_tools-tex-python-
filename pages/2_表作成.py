@@ -27,6 +27,7 @@ except ImportError:
     st.error("必要なモジュール (style.py, auth_manager.py) が見つかりません。")
     st.stop()
 
+auth_manager.check_auth()
 style.apply_custom_style()
 
 # ---------------------------------------------------------
@@ -57,9 +58,6 @@ def resize_dataframe(df, target_rows, target_cols):
                 new_col = f"{base}_{n}"
                 n += 1
             df[new_col] = ""
-
-    # ★変更点: インデックスを 1 始まりに振り直す
-    df.index = range(1, len(df) + 1)
 
     return df
 
@@ -113,24 +111,6 @@ def update_input_vals(action, axis):
         st.session_state.cols_input = c + 1 if action == "add" else max(1, c - 1)
 
     on_shape_change()
-
-# ---------------------------------------------------------
-# UIハイライト用関数 (Pandas Styler)
-# ---------------------------------------------------------
-def highlight_merges(df):
-    """
-    結合されているセルに対して背景色を設定するスタイル関数
-    """
-    # 全て空文字（スタイルなし）で初期化
-    style_df = pd.DataFrame('', index=df.index, columns=df.columns)
-    
-    if "merge_list" in st.session_state:
-        for m in st.session_state.merge_list:
-            r, c, rs, cs = m["r"], m["c"], m["rs"], m["cs"]
-            # ilocを使うため、インデックスのラベルに関わらず 0始まりの位置指定で正しく動作します
-            style_df.iloc[r:r+rs, c:c+cs] = 'background-color: #ffeeba; color: black;'
-            
-    return style_df
 
 # ---------------------------------------------------------
 # LaTeX 生成
@@ -232,8 +212,6 @@ if "df" not in st.session_state:
         np.full((5, 4), ""),
         columns=[f"列 {i+1}" for i in range(4)]
     )
-    # ★変更点: 初期化時も1始まりにする
-    st.session_state.df.index = range(1, len(st.session_state.df) + 1)
 
 if "merge_list" not in st.session_state:
     st.session_state.merge_list = []
@@ -261,13 +239,11 @@ if "column_format_input" not in st.session_state:
 
 column_format = st.sidebar.text_input("列フォーマット", key="column_format_input")
 
-auth_manager.check_auth()
-
 # ---------------------------------------------------------
 # UI
 # ---------------------------------------------------------
 
-st.title("LaTeX表作成ツール")
+st.title("LaTeX表作成ツール（結合対応）")
 
 # ---------------------------------------------------------
 # 1. テーブルサイズ変更
@@ -298,48 +274,7 @@ with c2:
     with b3:
         st.button("➕", key="col_plus", on_click=update_input_vals, args=("add", "col"))
 
-
-# ---------------------------------------------------------
-# 3. セル結合設定
-# ---------------------------------------------------------
-
-with st.expander("セルの結合設定", expanded=True):
-
-    r, c, rs, cs, add = st.columns([1, 1, 1, 1, 1])
-
-    with r:
-        st.number_input("行", 1, st.session_state.rows_input, 1, key="merge_r_input")
-    with c:
-        st.number_input("列", 1, st.session_state.cols_input, 1, key="merge_c_input")
-    with rs:
-        st.number_input("高さ (RowSpan)", 1, 20, 1, key="merge_rs_input")
-    with cs:
-        st.number_input("幅 (ColSpan)", 1, 20, 1, key="merge_cs_input")
-    with add:
-        st.write(""); st.write("")
-        st.button("追加", key="merge_add", on_click=add_merge)
-    
-    st.write("▼ **結合状態プレビュー**（黄色いエリアが結合されます）")
-    st.dataframe(
-        st.session_state.df.style.apply(lambda _: highlight_merges(st.session_state.df), axis=None),
-        use_container_width=True,
-        height=200
-    )
-
-    st.write("現在の結合リスト")
-    if st.session_state.merge_list:
-        for idx, m in enumerate(st.session_state.merge_list):
-            a, b = st.columns([4, 1])
-            with a:
-                st.text(f"行{m['r']+1}, 列{m['c']+1} → {m['rs']}×{m['cs']}")
-            with b:
-                st.button("削除", key=f"merge_del_{idx}", on_click=remove_merge, args=(idx,))
-    else:
-        st.info("結合なし")
-
 st.divider()
-
-
 
 # ---------------------------------------------------------
 # 2. 列名編集（前に移動）
@@ -363,11 +298,43 @@ if st.button("列名を更新", key="rename_btn"):
 st.divider()
 
 # ---------------------------------------------------------
+# 3. セル結合設定
+# ---------------------------------------------------------
+
+with st.expander("🔗 セルの結合設定"):
+
+    r, c, rs, cs, add = st.columns([1, 1, 1, 1, 1])
+
+    with r:
+        st.number_input("行", 1, st.session_state.rows_input, 1, key="merge_r_input")
+    with c:
+        st.number_input("列", 1, st.session_state.cols_input, 1, key="merge_c_input")
+    with rs:
+        st.number_input("高さ (RowSpan)", 1, 20, 1, key="merge_rs_input")
+    with cs:
+        st.number_input("幅 (ColSpan)", 1, 20, 1, key="merge_cs_input")
+    with add:
+        st.write(""); st.write("")
+        st.button("追加", key="merge_add", on_click=add_merge)
+
+    st.write("現在の結合リスト")
+    if st.session_state.merge_list:
+        for idx, m in enumerate(st.session_state.merge_list):
+            a, b = st.columns([4, 1])
+            with a:
+                st.text(f"行{m['r']+1}, 列{m['c']+1} → {m['rs']}×{m['cs']}")
+            with b:
+                st.button("削除", key=f"merge_del_{idx}", on_click=remove_merge, args=(idx,))
+    else:
+        st.info("結合なし")
+
+st.divider()
+
+# ---------------------------------------------------------
 # 4. データ編集
 # ---------------------------------------------------------
 
 st.write("### 3. データの編集")
-st.caption("※行番号が 1 から始まります。")
 
 edited_df = st.data_editor(
     st.session_state.df,
@@ -377,6 +344,42 @@ edited_df = st.data_editor(
 )
 
 st.divider()
+
+# ---------------------------------------------------------
+# 3.5 結合の可視化（色付き表示）
+# ---------------------------------------------------------
+
+st.write("### 4.セル結合の可視化")
+
+def visualize_merges(df, merges):
+    rows, cols = df.shape
+    color_map = [["" for _ in range(cols)] for _ in range(rows)]
+
+    for idx, m in enumerate(merges):
+        r, c, rs, cs = m["r"], m["c"], m["rs"], m["cs"]
+
+        # 各セルに一括で色付け（淡い黄色）
+        for i in range(r, r + rs):
+            for j in range(c, c + cs):
+                color_map[i][j] = "background-color: #fff7b3"  # 薄黄色
+
+        # 先頭セルは少し濃い色にする（視認性アップ）
+        color_map[r][c] = "background-color: #ffe86e"
+
+    styler = df.style.apply(
+        lambda _: color_map,
+        axis=None
+    )
+
+    return styler
+
+
+if st.session_state.merge_list:
+    vis_df = visualize_merges(st.session_state.df, st.session_state.merge_list)
+    st.dataframe(vis_df, use_container_width=True, hide_index=False)
+else:
+    st.info("結合が設定されていません。")
+
 
 # ---------------------------------------------------------
 # 5. LaTeX生成
@@ -404,3 +407,4 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
