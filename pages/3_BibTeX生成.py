@@ -2,6 +2,7 @@ import streamlit as st
 import sys
 import os
 
+# パス設定（環境に合わせて調整してください）
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import style
 import auth_manager
@@ -10,10 +11,12 @@ def generate_bibtex(entry_type, key, fields):
     bibtex = f"@{entry_type}{{{key},\n"
     for field, value in fields.items():
         if value:
-            if field == 'title': bibtex += f"  {field} = {{{{{value}}}}},\n"
+            if field == 'title': 
+                bibtex += f"  {field} = {{{{{value}}}}},\n"
             elif field == 'howpublished' and value.startswith(('http', 'https')) and '\\url' not in value:
                 bibtex += f"  {field} = {{\\url{{{value}}}}},\n"
-            else: bibtex += f"  {field} = {{{value}}},\n"
+            else: 
+                bibtex += f"  {field} = {{{value}}},\n"
     bibtex += "}"
     return bibtex
 
@@ -35,7 +38,7 @@ def main():
     st.sidebar.markdown("---")
     bib_file_path = st.sidebar.text_input("保存先パス", "references.bib")
 
-        # 1. 認証チェック
+    # 1. 認証チェック
     auth_manager.check_auth()
 
     st.header(f"{ENTRY_TYPES[entry_type]} 情報")
@@ -66,28 +69,52 @@ def main():
         fields['url'] = st.text_input("URL")
         fields['abstract'] = st.text_area("概要")
 
+    # --- 生成・保存ボタンの処理 ---
     if st.button("生成・保存", type="primary"):
         if not citation_key or not fields.get('title'):
             st.warning("引用キーとタイトルは必須です")
+        elif not bib_file_path:
+            st.error("保存先パスを指定してください")
         else:
             bib_output = generate_bibtex(entry_type, citation_key, fields)
-            if not bib_file_path: st.error("パスを指定してください")
-            else:
-                try:
-                    mode = 'a' if os.path.exists(bib_file_path) else 'w'
-                    with open(bib_file_path, mode, encoding='utf-8') as f:
-                        f.write(("\n" if mode=='a' else "") + bib_output)
-                    st.success("保存しました")
-                    st.code(bib_output, language='latex')
-                except Exception as e: st.error(f"エラー: {e}")
+            
+            try:
+                # ファイルが存在するか確認
+                file_exists = os.path.exists(bib_file_path)
+                
+                if file_exists:
+                    # 既にファイルがある場合：重複キーチェックを行う
+                    with open(bib_file_path, "r", encoding='utf-8') as f:
+                        existing_content = f.read()
+                        # BibTeXのキー定義部分（例: @article{key,）を簡易チェック
+                        if f"{{{citation_key}," in existing_content:
+                            st.error(f"エラー: 引用キー '{citation_key}' は既にファイル内に存在します。別のキーを指定してください。")
+                            st.stop() # 処理を中断
+                    
+                    mode = 'a' # 追記モード
+                    write_content = "\n" + bib_output # 前のデータとくっつかないように改行を入れる
+                    msg = "既存ファイルに追記しました"
+                else:
+                    # ファイルがない場合：新規作成
+                    mode = 'w' # 書き込みモード
+                    write_content = bib_output
+                    msg = "新しいファイルを作成して保存しました"
 
+                # ファイル書き込み実行
+                with open(bib_file_path, mode, encoding='utf-8') as f:
+                    f.write(write_content)
+
+                st.success(msg)
+                st.code(bib_output, language='latex')
+
+            except Exception as e:
+                st.error(f"ファイル保存エラー: {e}")
+
+    # --- ダウンロードボタン ---
     if bib_file_path and os.path.exists(bib_file_path):
         st.divider()
         with open(bib_file_path, "r", encoding="utf-8") as f: content = f.read()
         st.download_button("📥 .bibファイルをダウンロード", content, os.path.basename(bib_file_path))
 
-
 if __name__ == "__main__":
     main()
-
-
