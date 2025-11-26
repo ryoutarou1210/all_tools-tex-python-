@@ -61,10 +61,7 @@ def to_latex_sci(x):
 # ---------------------------------------------------------
 def main():
     st.set_page_config(page_title="散布図作成ツール", layout="wide")
-    
-    # --- 認証 & アナリティクス ---
-    auth_manager.check_auth()
-    # -------------------------
+
     
     style.apply_custom_style()
 
@@ -90,6 +87,11 @@ def main():
                 df = pd.read_csv(uploaded_file)
         except Exception as e:
             st.sidebar.error(f"読み込みエラー: {e}")
+
+        
+    # --- 認証 & アナリティクス ---
+    auth_manager.check_auth()
+    # -------------------------
 
     # ==========================================
     # メインエリア
@@ -370,3 +372,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
