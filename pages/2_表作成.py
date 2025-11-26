@@ -112,7 +112,25 @@ def update_input_vals(action, axis):
     on_shape_change()
 
 # ---------------------------------------------------------
-# LaTeX 生成
+# UIハイライト用関数 (Pandas Styler)
+# ---------------------------------------------------------
+def highlight_merges(df):
+    """
+    結合されているセルに対して背景色を設定するスタイル関数
+    """
+    # 全て空文字（スタイルなし）で初期化
+    style_df = pd.DataFrame('', index=df.index, columns=df.columns)
+    
+    if "merge_list" in st.session_state:
+        for m in st.session_state.merge_list:
+            r, c, rs, cs = m["r"], m["c"], m["rs"], m["cs"]
+            # 結合範囲に色（薄いオレンジ）を適用
+            style_df.iloc[r:r+rs, c:c+cs] = 'background-color: #ffeeba; color: black;'
+            
+    return style_df
+
+# ---------------------------------------------------------
+# LaTeX 生成 (色なしバージョンに戻しました)
 # ---------------------------------------------------------
 
 def generate_custom_latex(df, merges, caption, label, col_fmt, use_booktabs, center):
@@ -280,7 +298,7 @@ with c2:
 # 3. セル結合設定
 # ---------------------------------------------------------
 
-with st.expander("セルの結合設定"):
+with st.expander("セルの結合設定", expanded=True):
 
     r, c, rs, cs, add = st.columns([1, 1, 1, 1, 1])
 
@@ -295,6 +313,14 @@ with st.expander("セルの結合設定"):
     with add:
         st.write(""); st.write("")
         st.button("追加", key="merge_add", on_click=add_merge)
+    
+    # --- 結合確認用プレビュー (色付き) ---
+    st.write("▼ **結合状態プレビュー**（黄色いエリアが結合されます）")
+    st.dataframe(
+        st.session_state.df.style.apply(lambda _: highlight_merges(st.session_state.df), axis=None),
+        use_container_width=True,
+        height=200 # 高さを制限
+    )
 
     st.write("現在の結合リスト")
     if st.session_state.merge_list:
@@ -337,6 +363,7 @@ st.divider()
 # ---------------------------------------------------------
 
 st.write("### 3. データの編集")
+st.caption("※ここで値を入力してください。結合は反映されませんが、出力時には適用されます。")
 
 edited_df = st.data_editor(
     st.session_state.df,
@@ -373,8 +400,3 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
-
-
-
-
-
