@@ -52,10 +52,6 @@ with col_tool3:
         st.markdown("*サイドバーから選択*")
 
 st.divider()
-# --- 2. プロフィール表示 (ファイルの最後で実行) ---
-# これによりサイドバーの一番下に表示されます
-auth_manager.show_profile()
-# --------------------------------------------
 
 with st.expander("Pro Tips: 使いこなしのヒント", expanded=True):
     st.markdown("""
@@ -63,6 +59,7 @@ with st.expander("Pro Tips: 使いこなしのヒント", expanded=True):
     - **表ツール**: 列名はダブルクリックで変更できませんが、下部の入力欄で変更可能です。
     - **BibTeX**: Google Scholarの引用ボタンからコピーするより、ここで整形した方が統一感が出ます。
     """)
+
 
 
 
