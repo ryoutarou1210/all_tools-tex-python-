@@ -118,7 +118,7 @@ if st.button("LaTeXコードを生成", type="primary", use_container_width=True
     except Exception as e:
         st.error(f"Error: {e}")
 
-auth_manager.show_profile()
+
 
 
 
