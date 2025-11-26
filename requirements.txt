@@ -4,3 +4,4 @@ numpy
 matplotlib
 japanize-matplotlib
 openpyxl
+requests
