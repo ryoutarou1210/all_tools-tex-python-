@@ -121,7 +121,9 @@ def login_form():
                     submit_signup = st.form_submit_button("Create Account", use_container_width=True)
 
                 if submit_signup:
-                    if new_password != new_password_confirm:
+                    if not new_email.lower().endswith("@u.tsukuba.ac.jp"):
+                        st.error("新規登録は筑波大学のメールアドレス (@u.tsukuba.ac.jp) のみ許可されています。")
+                    elif new_password != new_password_confirm:
                         st.error("パスワードが一致しません。")
                     elif len(new_password) < 6:
                         st.error("パスワードは6文字以上で設定してください。")
@@ -179,4 +181,5 @@ def check_auth():
     inject_analytics()
     login_form()
     logout_button()
+
 
