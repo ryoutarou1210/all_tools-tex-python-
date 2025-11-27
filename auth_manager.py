@@ -12,8 +12,6 @@ import streamlit.components.v1 as components
 # Firebase Auth REST API URLs
 # ログイン用
 FIREBASE_AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={}"
-# 新規登録用
-FIREBASE_SIGNUP_URL = "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={}"
 
 def get_config():
     """設定を取得 (st.secretsがあればそれを優先)"""
@@ -137,6 +135,7 @@ def check_auth():
     inject_analytics()
     login_form()
     logout_button()
+
 
 
 
