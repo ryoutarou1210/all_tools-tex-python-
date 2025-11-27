@@ -68,7 +68,7 @@ def login_form():
             st.markdown("## 🔒 Auth Required")
             
             # タブで「ログイン」と「新規登録」を切り替え
-            tab_login = st.tabs(["ログイン"])
+            tab_login[0] = st.tabs(["ログイン"])
             
             config = get_config()
             api_key = config.get("apiKey")
@@ -135,6 +135,7 @@ def check_auth():
     inject_analytics()
     login_form()
     logout_button()
+
 
 
 
