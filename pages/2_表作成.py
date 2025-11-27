@@ -303,9 +303,9 @@ with st.expander("セルの結合設定", expanded=True):
     r, c, rs, cs, add = st.columns([1, 1, 1, 1, 1])
 
     with r:
-        st.number_input("行", 1, st.session_state.rows_input, 1, key="merge_r_input")
+        st.number_input("行", 0, st.session_state.rows_input, 1, key="merge_r_input")
     with c:
-        st.number_input("列", 1, st.session_state.cols_input, 1, key="merge_c_input")
+        st.number_input("列", 0, st.session_state.cols_input, 1, key="merge_c_input")
     with rs:
         st.number_input("高さ (RowSpan)", 1, 20, 1, key="merge_rs_input")
     with cs:
@@ -400,3 +400,4 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
