@@ -7,15 +7,7 @@ import streamlit.components.v1 as components
 # 設定 (提供された情報を設定)
 # ==========================================
 # セキュリティ推奨: 本番環境ではこれらを st.secrets に移動してください
-DEFAULT_CONFIG = {
-    "apiKey": "AIzaSyD21t2dnXcjsPlG3RaEGJxltRBF7wEjti8",
-    "authDomain": "python-tex-tools.firebaseapp.com",
-    "projectId": "python-tex-tools",
-    "storageBucket": "python-tex-tools.firebasestorage.app",
-    "messagingSenderId": "880041264852",
-    "appId": "1:880041264852:web:01788528e2dd29eb8c5d41",
-    "measurementId": "G-BBHB6JC0DN"
-}
+
 
 # Firebase Auth REST API URLs
 # ログイン用
@@ -187,3 +179,4 @@ def check_auth():
     inject_analytics()
     login_form()
     logout_button()
+
