@@ -268,7 +268,7 @@ st.title("LaTeX表作成ツール")
 # 1. テーブルサイズ変更
 # ---------------------------------------------------------
 
-st.write("### 1. テーブルサイズの変更")
+st.write("### 1. テーブルの変更")
 c1, c2 = st.columns(2)
 
 with c1:
@@ -400,5 +400,6 @@ if st.button("LaTeXコードを生成", key="generate_latex", type="primary"):
 
     except Exception as e:
         st.error(f"エラー: {e}")
+
 
 
