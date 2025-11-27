@@ -111,51 +111,7 @@ def login_form():
                     except Exception as e:
                         st.error(f"System Error: {e}")
 
-            # --- 新規ユーザー登録 ---
-            with tab_signup:
-                st.caption("新しいアカウントを作成")
-                with st.form("signup_form"):
-                    new_email = st.text_input("Email", key="signup_email")
-                    new_password = st.text_input("Password (6文字以上)", type="password", key="signup_pass")
-                    new_password_confirm = st.text_input("Confirm Password", type="password", key="signup_pass_confirm")
-                    submit_signup = st.form_submit_button("Create Account", use_container_width=True)
-
-                if submit_signup:
-                    if not new_email.lower().endswith("@u.tsukuba.ac.jp"):
-                        st.error("新規登録は筑波大学のメールアドレス (@u.tsukuba.ac.jp) のみ許可されています。")
-                    elif new_password != new_password_confirm:
-                        st.error("パスワードが一致しません。")
-                    elif len(new_password) < 6:
-                        st.error("パスワードは6文字以上で設定してください。")
-                    else:
-                        signup_url = FIREBASE_SIGNUP_URL.format(api_key)
-                        payload = {
-                            "email": new_email,
-                            "password": new_password,
-                            "returnSecureToken": True
-                        }
-                        try:
-                            with st.spinner("Creating account..."):
-                                r = requests.post(signup_url, json=payload)
-                                r.raise_for_status()
-                                _handle_auth_response(r.json())
-
-                        except requests.exceptions.HTTPError as err:
-                            error_json = err.response.json()
-                            error_msg = error_json.get('error', {}).get('message', 'Unknown Error')
-                            
-                            if error_msg == "EMAIL_EXISTS":
-                                st.error("このメールアドレスは既に登録されています。")
-                            elif error_msg == "WEAK_PASSWORD":
-                                st.error("パスワードが弱すぎます。")
-                            elif error_msg == "INVALID_EMAIL":
-                                st.error("無効なメールアドレス形式です。")
-                            else:
-                                st.error(f"Signup Error: {error_msg}")
-                        except Exception as e:
-                            st.error(f"System Error: {e}")
-        
-        # 未ログイン時はここでストップ
+           
         st.stop()
 
 def logout_button():
@@ -181,5 +137,6 @@ def check_auth():
     inject_analytics()
     login_form()
     logout_button()
+
 
 
